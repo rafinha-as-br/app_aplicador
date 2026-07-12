@@ -12,15 +12,10 @@ class AppAplicador extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'GeoPrag - Aplicador',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-        useMaterial3: true,
-      ),
+      theme: GeopragTheme.light(),
       initialRoute: '/',
       routes: {
         '/': (context) => const LandingScreen(),
-        '/cadastro': (context) => const CadastroDeIdentificacaoScreen(),
-        '/aguarde': (context) => const TelaDeAguardeScreen(),
         '/login': (context) => const LoginScreen(),
         '/ponto': (context) => const VisualizacaoDoPontoScreen(),
         '/ponto/marcar': (context) => const MarcacaoDoPontoScreen(),
