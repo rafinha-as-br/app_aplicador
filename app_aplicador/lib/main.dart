@@ -17,6 +17,9 @@ class AppAplicador extends StatelessWidget {
       routes: {
         '/': (context) => const LandingScreen(),
         '/login': (context) => const LoginScreen(),
+        '/senha/esqueci': (context) => const EsqueciSenhaScreen(),
+        '/senha/codigo': (context) => const VerificarCodigoScreen(),
+        '/senha/recriar': (context) => const RecriarSenhaScreen(),
         '/ponto': (context) => const VisualizacaoDoPontoScreen(),
         '/ponto/marcar': (context) => const MarcacaoDoPontoScreen(),
         '/aplicacao/info': (context) => const TelaInformativaScreen(),
