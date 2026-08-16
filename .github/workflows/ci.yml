@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+defaults:
+  run:
+    working-directory: app_aplicador
+
+jobs:
+  guard:
+    name: Guard - geoprag_modules deve ser git dependency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Bloqueia path dependency local
+        run: |
+          if grep -E "path:\s*\.\./" pubspec.yaml; then
+            echo "::error::pubspec.yaml aponta geoprag_modules via path local (../). Troque para dependência git (ref: develop) antes de subir."
+            exit 1
+          fi
+
+  quality-gates:
+    name: Analyze, test & build (web + apk)
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.5'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        # TODO: tirar o continue-on-error quando existirem testes de verdade
+        # aqui - hoje test/widget_test.dart é só o stub vazio do `flutter
+        # create` (0 testes reais, flutter test retorna "No tests found").
+        continue-on-error: true
+        run: flutter test
+
+      - name: Build web
+        # Alvo real de produção é mobile, mas a skill de QA valida via
+        # navegador - manter o build web garante que esse caminho continua
+        # saudável.
+        run: flutter build web
+
+      - name: Build APK
+        run: flutter build apk
