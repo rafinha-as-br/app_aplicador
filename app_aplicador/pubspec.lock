@@ -115,9 +115,11 @@ packages:
   geoprag_modules:
     dependency: "direct main"
     description:
-      path: "../../geoprag_modules/geoprag_modules"
-      relative: true
-    source: path
+      path: geoprag_modules_project
+      ref: develop
+      resolved-ref: d662b5b73d94696c69f0928d05121638f9021eca
+      url: "https://github.com/rafinha-as-br/geoprag_modules.git"
+    source: git
     version: "1.0.0"
   go_router:
     dependency: "direct main"
