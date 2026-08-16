@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Validate, build & publish release
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app_aplicador
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.5'
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        # Sem continue-on-error aqui: release.yml responde "está pronto pra
+        # virar versão oficial?", uma régua mais rígida que a do ci.yml.
+        run: flutter test
+
+      - name: Build web (release)
+        run: flutter build web --release
+
+      - name: Build APK (release)
+        run: flutter build apk --release
+
+      - name: Package web build
+        run: zip -r app_aplicador-web-${{ github.ref_name }}.zip build/web
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            app_aplicador/app_aplicador-web-${{ github.ref_name }}.zip
+            app_aplicador/build/app/outputs/flutter-apk/app-release.apk

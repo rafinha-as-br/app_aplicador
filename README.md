@@ -78,3 +78,14 @@ Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 - **Não bloqueia ainda**: `flutter test` roda e reporta, mas não derruba o job (`continue-on-error: true`). Motivo: `test/widget_test.dart` hoje é só o stub vazio gerado pelo `flutter create` — 0 testes reais (`flutter test` retorna "No tests found"). Assim que existirem testes de verdade, remover o `continue-on-error` e marcar `test` como check obrigatório na branch protection.
 - **Builda web e APK**: o alvo real de produção é mobile (Android), mas o build web é mantido porque a skill de QA valida via navegador — os dois caminhos precisam continuar saudáveis. iOS fica de fora por enquanto (custo/complexidade de runner `macos-latest` não se justifica ainda).
 - **Branch protection na `develop`**: ativa, exige os dois jobs acima passando + branch atualizada com a `develop` antes do merge (`strict: true`). `enforce_admins` está desligado — o dono do repo ainda consegue fazer bypass numa emergência, mas o fluxo normal (PR + merge automatizado) sempre passa pelos checks.
+
+## Release & Versionamento
+
+Ciclo de entrega separado do dia a dia de merges em `develop` — ver [Release & Versionamento](https://rafinha84dev.atlassian.net/wiki/spaces/CS1/pages/44335153) no Confluence para o conceito completo. Executado sob demanda por `jira-release-executor`, nunca automaticamente.
+
+- **Versão**: `version:` no `pubspec.yaml` (`X.Y.Z+build`, SemVer). Hoje em `0.1.0+1` — projeto em desenvolvimento inicial.
+- **Changelog**: [`CHANGELOG.md`](CHANGELOG.md), formato Keep a Changelog.
+- **Estratégia de branch**: sem branch de release dedicada por enquanto — `develop → main` direto via PR quando uma release for cortada. `release/X.Y.Z` fica reservada pra quando o projeto precisar de uma janela de estabilização (Release Candidate) antes do merge pra `main`.
+- **Pipeline**: [`.github/workflows/release.yml`](.github/workflows/release.yml), trigger em push de tag `v*`. Roda `analyze` + `test` de novo — aqui **sem** `continue-on-error` (release.yml responde "está pronto pra virar versão oficial?", régua mais rígida que o `ci.yml`) — builda `flutter build web --release` e `flutter build apk --release`, anexa os dois como artifact na GitHub Release, criada com notas geradas automaticamente.
+- **Atenção**: como hoje não existem testes reais aqui (0 testes, ver seção CI), o step `flutter test` do `release.yml` **sempre falha** ("No tests found") — nenhuma release consegue ser cortada até existir pelo menos 1 teste real. Intencional: reflete a régua mais rígida do ciclo de release.
+- **Branch protection na `main`**: ativa, exige o job `Validate, build & publish release` passando antes de qualquer merge.
