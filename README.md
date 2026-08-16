@@ -72,8 +72,9 @@ Exemplo: `feat/GEOPRAG-24-claude`. A chave da issue no nome é o que permite a i
 Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 - **Triggers**: Pull Request para `develop`/`main`; push em `develop`
-- **Job `guard`**: falha se detectar dependência via path local (`../`) no `pubspec.yaml` — pega de volta qualquer troca de dev local esquecida antes do push
-- **Job `quality-gates`** (depende do `guard`): checkout → Flutter 3.35.5 → `flutter pub get` → `flutter analyze --no-fatal-infos` → `flutter test` → `flutter build web` → `flutter build apk`
-- **Gates obrigatórios (bloqueiam merge)**: `guard`, `flutter analyze` (erros e warnings; infos não bloqueiam), `flutter build web`, `flutter build apk`
+- **Job `Guard - geoprag_modules deve ser git dependency`**: falha se detectar dependência via path local (`../`) no `pubspec.yaml` — pega de volta qualquer troca de dev local esquecida antes do push
+- **Job `Analyze, test & build (web + apk)`** (depende do guard): checkout → Flutter 3.35.5 → `flutter pub get` → `flutter analyze --no-fatal-infos` → `flutter test` → `flutter build web` → `flutter build apk`
+- **Gates obrigatórios (bloqueiam merge)**: os dois jobs acima (guard sempre; no segundo, `flutter analyze` — erros e warnings, infos não bloqueiam —, `flutter build web` e `flutter build apk`)
 - **Não bloqueia ainda**: `flutter test` roda e reporta, mas não derruba o job (`continue-on-error: true`). Motivo: `test/widget_test.dart` hoje é só o stub vazio gerado pelo `flutter create` — 0 testes reais (`flutter test` retorna "No tests found"). Assim que existirem testes de verdade, remover o `continue-on-error` e marcar `test` como check obrigatório na branch protection.
 - **Builda web e APK**: o alvo real de produção é mobile (Android), mas o build web é mantido porque a skill de QA valida via navegador — os dois caminhos precisam continuar saudáveis. iOS fica de fora por enquanto (custo/complexidade de runner `macos-latest` não se justifica ainda).
+- **Branch protection na `develop`**: ativa, exige os dois jobs acima passando + branch atualizada com a `develop` antes do merge (`strict: true`). `enforce_admins` está desligado — o dono do repo ainda consegue fazer bypass numa emergência, mas o fluxo normal (PR + merge automatizado) sempre passa pelos checks.
