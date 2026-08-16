@@ -31,7 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
   geoprag_modules:
-    path: ../../geoprag_modules/geoprag_modules
+    git:
+      url: https://github.com/rafinha-as-br/geoprag_modules.git
+      ref: develop
+      path: geoprag_modules_project
   go_router: ^17.2.3
   flutter_bloc: ^9.1.1
 
