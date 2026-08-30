@@ -78,7 +78,10 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/ponto/marcar',
-      builder: (context, state) => const MarcacaoDoPontoScreen(),
+      builder: (context, state) => BlocProvider(
+        create: (_) => _bootstrap.buildMarcacaoDoPontoCubit(),
+        child: const MarcacaoDoPontoScreen(),
+      ),
     ),
     GoRoute(
       path: '/aplicacao/info',
