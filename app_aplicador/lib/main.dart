@@ -117,7 +117,10 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/denuncias/nova',
-      builder: (context, state) => const CadastroDoFocoScreen(),
+      builder: (context, state) => BlocProvider(
+        create: (_) => _bootstrap.buildCriarDenunciaDeFocoCubit(),
+        child: const CadastroDoFocoScreen(),
+      ),
     ),
   ],
 );
