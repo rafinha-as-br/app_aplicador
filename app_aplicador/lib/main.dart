@@ -105,7 +105,10 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/recebimento/confirmar',
-      builder: (context, state) => const ReceberProdutoScreen(),
+      builder: (context, state) => BlocProvider(
+        create: (_) => _bootstrap.buildRecebimentoConfirmacaoCubit(),
+        child: const ReceberProdutoScreen(),
+      ),
     ),
     GoRoute(
       path: '/denuncias',
