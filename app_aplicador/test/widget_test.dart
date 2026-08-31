@@ -1,7 +1,18 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app_aplicador/main.dart';
+
+// `_router` é singleton top-level em main.dart, compartilhado entre os
+// testes deste arquivo — a rota atual pode não ser mais a landing screen,
+// dependendo de qual teste rodou antes. `find.byType(MaterialApp)` fica
+// acima do Router e não enxerga o GoRouter; este helper varre a árvore
+// inteira em busca de um elemento que já esteja dentro do escopo do Router,
+// não importa qual seja a tela renderizada no momento.
+BuildContext _routerContext(WidgetTester tester) {
+  return tester.allElements.firstWhere((e) => GoRouter.maybeOf(e) != null);
+}
 
 void main() {
   testWidgets('app sobe sem erro e mostra a landing screen', (tester) async {
@@ -31,7 +42,7 @@ void main() {
     await tester.pumpWidget(const AppAplicador());
     await tester.pump(const Duration(milliseconds: 600));
 
-    final context = tester.element(find.text('Entrar'));
+    final context = _routerContext(tester);
     for (final rota in ['/ponto', '/inventario', '/recebimentos', '/denuncias']) {
       GoRouter.of(context).go(rota);
       await tester.pump(const Duration(milliseconds: 300));
@@ -51,7 +62,7 @@ void main() {
       await tester.pumpWidget(const AppAplicador());
       await tester.pump(const Duration(milliseconds: 600));
 
-      final context = tester.element(find.text('Entrar'));
+      final context = _routerContext(tester);
       GoRouter.of(context).go('/recebimento/confirmar');
       await tester.pump(const Duration(milliseconds: 300));
 
