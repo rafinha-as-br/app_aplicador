@@ -74,7 +74,10 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/ponto',
-      builder: (context, state) => const VisualizacaoDoPontoScreen(),
+      builder: (context, state) => BlocProvider(
+        create: (_) => _bootstrap.buildPontoDeAplicacaoCubit(),
+        child: const VisualizacaoDoPontoScreen(),
+      ),
     ),
     GoRoute(
       path: '/ponto/marcar',
@@ -97,11 +100,17 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/inventario',
-      builder: (context, state) => const ListaDeInsumosScreen(),
+      builder: (context, state) => BlocProvider(
+        create: (_) => _bootstrap.buildInventarioCubit(),
+        child: const ListaDeInsumosScreen(),
+      ),
     ),
     GoRoute(
       path: '/recebimentos',
-      builder: (context, state) => const RecebimentosScreen(),
+      builder: (context, state) => BlocProvider(
+        create: (_) => _bootstrap.buildRecebimentosCubit(),
+        child: const RecebimentosScreen(),
+      ),
     ),
     GoRoute(
       path: '/recebimento/confirmar',
@@ -109,7 +118,10 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/denuncias',
-      builder: (context, state) => const DashboardDeFocosScreen(),
+      builder: (context, state) => BlocProvider(
+        create: (_) => _bootstrap.buildDenunciasDeFocoCubit(),
+        child: const DashboardDeFocosScreen(),
+      ),
     ),
     GoRoute(
       path: '/denuncias/info',
