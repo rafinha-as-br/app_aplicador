@@ -22,7 +22,7 @@ class AplicadorGoRouterNavigator implements AplicadorNavigator {
   void toLoginResetStack() => _router.go('/login');
 
   @override
-  void toPonto() => _router.pushReplacement('/ponto');
+  void toPonto() => _router.go('/ponto');
   @override
   void toPontoMarcar() => _router.push('/ponto/marcar');
 
