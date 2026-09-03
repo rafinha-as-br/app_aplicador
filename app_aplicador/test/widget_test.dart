@@ -52,6 +52,28 @@ void main() {
   });
 
   testWidgets(
+    'navega pelo fluxo de registro de aplicação sem erro de Provider ausente',
+    (tester) async {
+      // GEOPRAG-126: mesma regressão de GEOPRAG-91/94 — /aplicacao/geo e
+      // /aplicacao/registrar renderizavam GeolocalizacaoScreen/
+      // TelaDeAplicacaoScreen sem envolvê-las num BlocProvider, e as duas
+      // telas fazem BlocBuilder<XCubit, ...> por dentro. Reproduzia "Could
+      // not find the correct Provider<XCubit>" ao clicar em "continuar" na
+      // tela informativa.
+      await tester.pumpWidget(const AppAplicador());
+      await tester.pump(const Duration(milliseconds: 600));
+
+      final context = _routerContext(tester);
+      for (final rota in ['/aplicacao/geo', '/aplicacao/registrar']) {
+        GoRouter.of(context).go(rota);
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(tester.takeException(), isNull, reason: 'rota $rota');
+      }
+    },
+  );
+
+  testWidgets(
     'toPonto (pós-login) reseta a pilha — sem botão de voltar em /ponto',
     (tester) async {
       // GEOPRAG-125: toPonto() usava pushReplacement, que só troca o topo da

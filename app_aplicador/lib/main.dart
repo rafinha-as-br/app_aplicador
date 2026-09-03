@@ -92,11 +92,20 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/aplicacao/geo',
-      builder: (context, state) => const GeolocalizacaoScreen(),
+      // TODO(GEOPRAG-24): aplicadorId mockado — o roteamento real ainda não
+      // repassa qual aplicador está autenticado/em campo (ver bootstrap.dart).
+      builder: (context, state) => BlocProvider(
+        create: (_) => _bootstrap.buildGeolocalizacaoCubit('1'),
+        child: const GeolocalizacaoScreen(),
+      ),
     ),
     GoRoute(
       path: '/aplicacao/registrar',
-      builder: (context, state) => const TelaDeAplicacaoScreen(),
+      // TODO(GEOPRAG-24): aplicadorId mockado — mesma limitação da rota acima.
+      builder: (context, state) => BlocProvider(
+        create: (_) => _bootstrap.buildAplicacaoAtualCubit('1'),
+        child: const TelaDeAplicacaoScreen(),
+      ),
     ),
     GoRoute(
       path: '/inventario',
