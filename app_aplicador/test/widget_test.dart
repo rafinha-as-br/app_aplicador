@@ -52,6 +52,30 @@ void main() {
   });
 
   testWidgets(
+    'toPonto (pós-login) reseta a pilha — sem botão de voltar em /ponto',
+    (tester) async {
+      // GEOPRAG-125: toPonto() usava pushReplacement, que só troca o topo da
+      // pilha — a landing screen ('/') ficava embaixo de '/ponto' e o
+      // GoRouter/AppBar mostravam um botão de voltar indevido. Reproduz o
+      // mesmo encadeamento da tela de login (push '/login' a partir da
+      // landing, depois vai para '/ponto') e confirma que a pilha fica com
+      // uma única rota.
+      await tester.pumpWidget(const AppAplicador());
+      await tester.pump(const Duration(milliseconds: 600));
+
+      final router = GoRouter.of(_routerContext(tester));
+      router.push('/login');
+      await tester.pump(const Duration(milliseconds: 300));
+
+      router.go('/ponto');
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+      expect(Navigator.canPop(_routerContext(tester)), isFalse);
+    },
+  );
+
+  testWidgets(
     'navega para /recebimento/confirmar sem erro de Provider ausente',
     (tester) async {
       // GEOPRAG-94 (subtask 106): mesma regressão de GEOPRAG-91 — a rota
