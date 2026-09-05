@@ -1,0 +1,10 @@
+appId: com.example.app_aplicador
+---
+# GEOPRAG-125: apos login, o usuario deve cair em /ponto sem um botao de
+# voltar na AppBar (a pilha de navegacao deve ser resetada via go(), nao
+# empilhada com pushReplacement). Ver AplicadorGoRouterNavigator.toPonto().
+- runFlow: ../auth/login_success.yaml
+- assertVisible: "Meu Ponto"
+- assertNotVisible: "Voltar"
+- assertNotVisible: "Back"
+- takeScreenshot: geoprag-125-sem-voltar-apos-login

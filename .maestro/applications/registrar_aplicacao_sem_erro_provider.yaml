@@ -1,0 +1,16 @@
+appId: com.example.app_aplicador
+---
+# GEOPRAG-126: as rotas /aplicacao/geo e /aplicacao/registrar devem carregar
+# sem erro de provider nao inicializado (BlocProvider agora envolve as duas
+# rotas em main.dart, usando AplicadorBootstrap.buildGeolocalizacaoCubit /
+# buildAplicacaoAtualCubit).
+- runFlow: ../auth/login_success.yaml
+- tapOn: "Registrar Aplicação"
+- assertVisible: "Atenção"
+- tapOn: "Estou ciente, continuar"
+- assertVisible: "Desloque-se até o ponto"
+- takeScreenshot: geoprag-126-validacao-ponto-sem-erro
+- tapOn: "Simular chegada ao ponto (Mock)"
+- tapOn: "Iniciar Aplicação"
+- assertVisible: "Dosagem Recomendada"
+- takeScreenshot: geoprag-126-execucao-aplicacao-sem-erro

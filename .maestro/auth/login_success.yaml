@@ -1,0 +1,13 @@
+appId: com.example.app_aplicador
+---
+- launchApp:
+    clearState: true
+- tapOn: "Entrar"
+- tapOn: "CPF ou E-mail"
+- inputText: "000.000.000-00"
+- tapOn: "Senha"
+- inputText: "123456"
+- tapOn:
+    text: "Entrar"
+    below: "Esqueci minha senha"
+- assertVisible: "Bem-vindo, Voluntário!"
