@@ -74,38 +74,47 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/ponto',
-      builder: (context, state) => BlocProvider(
-        create: (_) => _bootstrap.buildPontoDeAplicacaoCubit(),
-        child: const VisualizacaoDoPontoScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/ponto/marcar',
-      builder: (context, state) => BlocProvider(
-        create: (_) => _bootstrap.buildMarcacaoDoPontoCubit(),
-        child: const MarcacaoDoPontoScreen(),
-      ),
-    ),
-    GoRoute(
-      path: '/aplicacao/info',
-      builder: (context, state) => const TelaInformativaScreen(),
-    ),
-    GoRoute(
-      path: '/aplicacao/geo',
       // TODO(GEOPRAG-24): aplicadorId mockado — o roteamento real ainda não
       // repassa qual aplicador está autenticado/em campo (ver bootstrap.dart).
       builder: (context, state) => BlocProvider(
-        create: (_) => _bootstrap.buildGeolocalizacaoCubit('1'),
-        child: const GeolocalizacaoScreen(),
+        create: (_) => _bootstrap.buildMeusPontosCubit('1'),
+        child: const MeusPontosScreen(),
       ),
     ),
     GoRoute(
+      path: '/ponto/detalhe',
+      builder: (context, state) {
+        final pontoId = state.uri.queryParameters['id']!;
+        return BlocProvider(
+          create: (_) => _bootstrap.buildDetalheDoPontoDesignadoCubit(pontoId),
+          child: const DetalheDoPontoDesignadoScreen(),
+        );
+      },
+    ),
+    GoRoute(
+      path: '/aplicacao/info',
+      builder: (context, state) =>
+          TelaInformativaScreen(pontoId: state.uri.queryParameters['id']!),
+    ),
+    GoRoute(
+      path: '/aplicacao/geo',
+      builder: (context, state) {
+        final pontoId = state.uri.queryParameters['id']!;
+        return BlocProvider(
+          create: (_) => _bootstrap.buildGeolocalizacaoCubit(pontoId),
+          child: const GeolocalizacaoScreen(),
+        );
+      },
+    ),
+    GoRoute(
       path: '/aplicacao/registrar',
-      // TODO(GEOPRAG-24): aplicadorId mockado — mesma limitação da rota acima.
-      builder: (context, state) => BlocProvider(
-        create: (_) => _bootstrap.buildAplicacaoAtualCubit('1'),
-        child: const TelaDeAplicacaoScreen(),
-      ),
+      builder: (context, state) {
+        final pontoId = state.uri.queryParameters['id']!;
+        return BlocProvider(
+          create: (_) => _bootstrap.buildTelaDeAplicacaoCubit(pontoId),
+          child: const TelaDeAplicacaoScreen(),
+        );
+      },
     ),
     GoRoute(
       path: '/inventario',

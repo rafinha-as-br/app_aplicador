@@ -43,7 +43,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
 
     final context = _routerContext(tester);
-    for (final rota in ['/ponto', '/inventario', '/recebimentos', '/denuncias']) {
+    for (final rota in [
+      '/ponto',
+      '/ponto/detalhe?id=pa1',
+      '/inventario',
+      '/recebimentos',
+      '/denuncias',
+    ]) {
       GoRouter.of(context).go(rota);
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -64,7 +70,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
 
       final context = _routerContext(tester);
-      for (final rota in ['/aplicacao/geo', '/aplicacao/registrar']) {
+      for (final rota in ['/aplicacao/geo?id=pa1', '/aplicacao/registrar?id=pa1']) {
         GoRouter.of(context).go(rota);
         await tester.pump(const Duration(milliseconds: 300));
 

@@ -24,15 +24,25 @@ class AplicadorGoRouterNavigator implements AplicadorNavigator {
   @override
   void toPonto() => _router.go('/ponto');
   @override
-  void toPontoMarcar() => _router.push('/ponto/marcar');
+  void toPontoDetalhe(String id) => _router.push(
+    Uri(path: '/ponto/detalhe', queryParameters: {'id': id}).toString(),
+  );
 
   @override
-  void toAplicacaoInfo() => _router.push('/aplicacao/info');
+  void toAplicacaoInfo(String pontoId) => _router.push(
+    Uri(path: '/aplicacao/info', queryParameters: {'id': pontoId}).toString(),
+  );
   @override
-  void toAplicacaoGeo() => _router.pushReplacement('/aplicacao/geo');
+  void toAplicacaoGeo(String pontoId) => _router.pushReplacement(
+    Uri(path: '/aplicacao/geo', queryParameters: {'id': pontoId}).toString(),
+  );
   @override
-  void toAplicacaoRegistrar() =>
-      _router.pushReplacement('/aplicacao/registrar');
+  void toAplicacaoRegistrar(String pontoId) => _router.pushReplacement(
+    Uri(
+      path: '/aplicacao/registrar',
+      queryParameters: {'id': pontoId},
+    ).toString(),
+  );
 
   @override
   void toInventario() => _router.pushReplacement('/inventario');
