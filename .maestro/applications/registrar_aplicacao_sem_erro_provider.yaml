@@ -4,8 +4,17 @@ appId: com.example.app_aplicador
 # sem erro de provider nao inicializado (BlocProvider agora envolve as duas
 # rotas em main.dart, usando AplicadorBootstrap.buildGeolocalizacaoCubit /
 # buildAplicacaoAtualCubit).
+#
+# Atualizado em 2026-09-06 (GEOPRAG-111): o botao "Registrar Aplicacao" da
+# tela antiga "Meu Ponto" nao existe mais - o fluxo agora comeca na tela
+# "Meus Pontos de Aplicacao" (lista), passa por "Detalhe do Ponto" e so
+# entao chega em "Iniciar Aplicacao". Ponto usado: #GAS1 (Ativa, ja tem
+# execucoes -> aparece como Revisita).
 - runFlow: ../auth/login_success.yaml
-- tapOn: "Registrar Aplicação"
+- tapOn:
+    text: "Córrego Gasparinho.*"
+- assertVisible: "Detalhe do Ponto"
+- tapOn: "Iniciar Aplicação"
 - assertVisible: "Atenção"
 - tapOn: "Estou ciente, continuar"
 - assertVisible: "Desloque-se até o ponto"

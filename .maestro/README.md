@@ -15,8 +15,17 @@ para `develop` pela própria skill de QA — nunca código de produção.
 ├── navigation/
 │   └── sem_botao_voltar_apos_login.yaml   ← GEOPRAG-125
 └── applications/
-    └── registrar_aplicacao_sem_erro_provider.yaml   ← GEOPRAG-126
+    ├── registrar_aplicacao_sem_erro_provider.yaml   ← GEOPRAG-126
+    └── meus_pontos_e_distancia_configuravel.yaml    ← GEOPRAG-111/74/75
 ```
+
+**Atualização 2026-09-06 (GEOPRAG-111):** `login_success.yaml`,
+`sem_botao_voltar_apos_login.yaml` e `registrar_aplicacao_sem_erro_provider.yaml`
+foram corrigidos — todos ainda apontavam para a tela legada "Meu Ponto"
+(com botão "Registrar Aplicação" direto na lista), removida pela GEOPRAG-111
+em favor do módulo "Aplicações" (`Meus Pontos de Aplicação` → `Detalhe do
+Ponto` → fluxo de campo). Sem essa correção os três flows quebravam nesta
+rodada de QA, não por regressão real, mas porque documentavam a UI antiga.
 
 - **`auth/`**: flows reutilizáveis de autenticação. Outros flows usam
   `runFlow: ../auth/login_success.yaml` em vez de duplicar os passos de
