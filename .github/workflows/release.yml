@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      aplicador_version:
+        description: 'Versao do geoprag_aplicador (ex.: 1.2.0 ou 1.2.0-rc.1) - vazio = nao versiona'
+        required: false
+        default: ''
+      release_type:
+        description: 'Tipo da versao produzida'
+        type: choice
+        options: [pre_release, final]
+        default: pre_release
+      publish:
+        description: 'Criar tag e (em final) GitHub Release'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Validate, bump, build & publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.35.5'
+          channel: stable
+          cache: true
+
+      - name: Criar a release branch
+        id: branch
+        run: |
+          BRANCH="release/$(date +%Y-%m-%d)-${{ github.run_number }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          echo "name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Bump da versao (geoprag_aplicador)
+        if: inputs.aplicador_version != ''
+        working-directory: app_aplicador
+        run: |
+          set -e
+          sed -i "s/^version: .*/version: ${{ inputs.aplicador_version }}+${{ github.run_number }}/" pubspec.yaml
+          git diff --stat
+
+      - name: Commit e push da release branch
+        run: |
+          if git diff --quiet; then
+            echo "Nenhum bump de versao nesta rodada."
+          else
+            git commit -am "release: bump de versao (run ${{ github.run_number }})"
+          fi
+          git push origin "${{ steps.branch.outputs.name }}"
+
+      # Sem continue-on-error: release.yml responde "esta pronto pra virar
+      # versao oficial?", uma regua mais rigida que a do ci.yml.
+      - name: Build geoprag_aplicador (apk)
+        if: inputs.aplicador_version != ''
+        working-directory: app_aplicador
+        run: |
+          flutter pub get
+          flutter analyze --no-fatal-infos
+          flutter test
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk "$GITHUB_WORKSPACE/geoprag_aplicador-${{ inputs.aplicador_version }}.apk"
+
+      # Nome deterministico <componente>-<versao>: e' assim que o Release
+      # Orchestrator acha o artefato sem adivinhar.
+      - name: Publicar artefato de geoprag_aplicador
+        if: inputs.aplicador_version != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: geoprag_aplicador-${{ inputs.aplicador_version }}
+          path: geoprag_aplicador-${{ inputs.aplicador_version }}.apk
+          retention-days: 30
+
+      - name: Criar tag e, em release final, a GitHub Release
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          set -e
+          version="${{ inputs.aplicador_version }}"
+          [ -z "$version" ] && exit 0
+
+          tag="geoprag_aplicador/v$version"
+          git tag -a "$tag" -m "geoprag_aplicador v$version"
+          git push origin "$tag"
+          echo "tag criada: $tag"
+
+          if [ "$RELEASE_TYPE" != "final" ]; then
+            echo "release_type=$RELEASE_TYPE - sem GitHub Release, so' tag + artefato"
+            exit 0
+          fi
+
+          base="${version%%-*}"
+          notes=".github/release-notes/geoprag_aplicador-$version.md"
+          [ -f "$notes" ] || notes=".github/release-notes/geoprag_aplicador-$base.md"
+
+          if [ -f "$notes" ]; then
+            gh release create "$tag" "geoprag_aplicador-$version.apk" \
+              --title "geoprag_aplicador v$version" \
+              --target "${{ steps.branch.outputs.name }}" \
+              --notes-file "$notes"
+          else
+            gh release create "$tag" "geoprag_aplicador-$version.apk" \
+              --title "geoprag_aplicador v$version" \
+              --target "${{ steps.branch.outputs.name }}" \
+              --generate-notes
+          fi
+
+      - name: Resumo
+        run: |
+          {
+            echo "### Release"
+            echo ""
+            echo "- Branch: \`${{ steps.branch.outputs.name }}\`"
+            echo "- Tipo: \`${{ inputs.release_type }}\`  |  publish: \`${{ inputs.publish }}\`"
+            echo "- geoprag_aplicador: \`${{ inputs.aplicador_version || 'nao versionado' }}\`"
+            echo ""
+            echo "A distribuicao agregada (ZIP com runtime) e' montada pelo"
+            echo "Release Orchestrator local, nao por este workflow."
+          } >> "$GITHUB_STEP_SUMMARY"

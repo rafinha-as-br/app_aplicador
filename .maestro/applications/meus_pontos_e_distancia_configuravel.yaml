@@ -1,0 +1,33 @@
+appId: com.example.app_aplicador
+---
+# GEOPRAG-111: modulo unico "Aplicacoes" (Meus Pontos + Detalhe do Ponto
+# Designado), substituindo as telas legadas de marcacao/visualizacao de
+# ponto por GPS.
+#
+# GEOPRAG-74: a distancia de alerta do geofence (antes fixa em 150m) agora
+# vem do campo cadastrado distanciaEntreSubpontosMetros de cada ponto -
+# nunca mais um valor fixo. O ponto #GAS1 (mock) tem distanciaEntreSubpontosMetros
+# = 50, usado abaixo para provar que o valor exibido acompanha o cadastro.
+#
+# GEOPRAG-75 (parte de revisita): #GAS1 ja tem 2 execucoes no mock, entao
+# deve aparecer como "Revisita" (nao "Primeira aplicacao"), com o trajeto
+# da visita anterior tracejado na tela de geolocalizacao.
+- runFlow: ../auth/login_success.yaml
+- assertVisible: "Meus Pontos de Aplicação"
+- assertVisible:
+    text: "Córrego Gasparinho.*"
+- tapOn:
+    text: "Córrego Gasparinho.*"
+- assertVisible: "Detalhe do Ponto"
+- assertVisible: "Revisita"
+- assertVisible: "Dosagem Recomendada"
+- assertVisible:
+    text: ".*Distância entre subpontos: 50 m.*"
+- takeScreenshot: geoprag111-detalhe-do-ponto-designado
+- tapOn: "Iniciar Aplicação"
+- assertVisible: "Atenção"
+- tapOn: "Estou ciente, continuar"
+- assertVisible:
+    text: ".*aprox\\. 50m de distância.*"
+- assertVisible: "Trajeto da visita anterior"
+- takeScreenshot: geoprag74-distancia-configuravel-geolocalizacao
