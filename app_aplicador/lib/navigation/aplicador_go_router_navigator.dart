@@ -32,12 +32,16 @@ class AplicadorGoRouterNavigator implements AplicadorNavigator {
   void toAplicacaoInfo(String pontoId) => _router.push(
     Uri(path: '/aplicacao/info', queryParameters: {'id': pontoId}).toString(),
   );
+  // GEOPRAG-152: `push`, não `pushReplacement` — são etapas de um fluxo
+  // (info → geo → registrar), não destinos de topo. Com `pushReplacement` a
+  // pilha nunca crescia, então o voltar do Android não tinha o que popar e
+  // fechava o app em vez de cancelar a etapa.
   @override
-  void toAplicacaoGeo(String pontoId) => _router.pushReplacement(
+  void toAplicacaoGeo(String pontoId) => _router.push(
     Uri(path: '/aplicacao/geo', queryParameters: {'id': pontoId}).toString(),
   );
   @override
-  void toAplicacaoRegistrar(String pontoId) => _router.pushReplacement(
+  void toAplicacaoRegistrar(String pontoId) => _router.push(
     Uri(
       path: '/aplicacao/registrar',
       queryParameters: {'id': pontoId},
@@ -55,8 +59,10 @@ class AplicadorGoRouterNavigator implements AplicadorNavigator {
   void toDenuncias() => _router.pushReplacement('/denuncias');
   @override
   void toDenunciaEducativa() => _router.push('/denuncias/info');
+  // GEOPRAG-152: idem — é o passo de preenchimento de uma nova denúncia,
+  // não um destino de topo.
   @override
-  void toDenunciaNova() => _router.pushReplacement('/denuncias/nova');
+  void toDenunciaNova() => _router.push('/denuncias/nova');
 
   @override
   void back() => _router.pop();

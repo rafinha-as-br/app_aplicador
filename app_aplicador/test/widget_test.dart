@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geoprag_modules/geoprag_modules.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:app_aplicador/main.dart';
@@ -13,6 +14,12 @@ import 'package:app_aplicador/main.dart';
 BuildContext _routerContext(WidgetTester tester) {
   return tester.allElements.firstWhere((e) => GoRouter.maybeOf(e) != null);
 }
+
+/// Quantidade de rotas empilhadas no momento — cresce a cada `push`, fica
+/// igual a cada `pushReplacement` (GEOPRAG-152).
+int _pilha(WidgetTester tester) => GoRouter.of(
+  _routerContext(tester),
+).routerDelegate.currentConfiguration.matches.length;
 
 void main() {
   testWidgets('app sobe sem erro e mostra a landing screen', (tester) async {
@@ -70,7 +77,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
 
       final context = _routerContext(tester);
-      for (final rota in ['/aplicacao/geo?id=pa1', '/aplicacao/registrar?id=pa1']) {
+      for (final rota in [
+        '/aplicacao/geo?id=pa1',
+        '/aplicacao/registrar?id=pa1',
+      ]) {
         GoRouter.of(context).go(rota);
         await tester.pump(const Duration(milliseconds: 300));
 
@@ -100,6 +110,77 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(Navigator.canPop(_routerContext(tester)), isFalse);
+    },
+  );
+
+  testWidgets(
+    'toAplicacaoGeo/toAplicacaoRegistrar empilham — voltar do Android '
+    'cancela a etapa em vez de fechar o app',
+    (tester) async {
+      // GEOPRAG-152: as duas rotas usavam pushReplacement, uma etapa de
+      // fluxo (não um destino de topo) — cada uma delas substituía o frame
+      // anterior em vez de empilhar, então uma restauração do Android que
+      // reabre o app só na tela atual (processo morto em segundo plano)
+      // ficava sem nenhum frame anterior para o voltar popar. Reproduz a
+      // cadeia real (`meus_pontos` → `detalhe_do_ponto` → `tela_informativa`
+      // → `geolocalizacao`) e confere que cada etapa soma +1 à pilha, nunca
+      // fica no mesmo tamanho.
+      await tester.pumpWidget(const AppAplicador());
+      await tester.pump(const Duration(milliseconds: 600));
+
+      final context = _routerContext(tester);
+      final router = GoRouter.of(context);
+      final navigator = AplicadorNavigatorScope.of(context);
+
+      router.go('/ponto');
+      await tester.pump(const Duration(milliseconds: 300));
+      final antesDoDetalhe = _pilha(tester);
+
+      navigator.toPontoDetalhe('pa1');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(_pilha(tester), antesDoDetalhe + 1);
+
+      navigator.toAplicacaoInfo('pa1');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(_pilha(tester), antesDoDetalhe + 2);
+
+      navigator.toAplicacaoGeo('pa1');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.takeException(), isNull);
+      expect(_pilha(tester), antesDoDetalhe + 3);
+
+      navigator.toAplicacaoRegistrar('pa1');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.takeException(), isNull);
+      expect(_pilha(tester), antesDoDetalhe + 4);
+    },
+  );
+
+  testWidgets(
+    'toDenunciaNova empilha — voltar do Android cancela em vez de fechar o app',
+    (tester) async {
+      // GEOPRAG-152: mesma correção para o fluxo de nova denúncia — reproduz
+      // a cadeia real (`dashboard_de_focos` → `tela_educativa`).
+      await tester.pumpWidget(const AppAplicador());
+      await tester.pump(const Duration(milliseconds: 600));
+
+      final context = _routerContext(tester);
+      final router = GoRouter.of(context);
+      final navigator = AplicadorNavigatorScope.of(context);
+
+      router.go('/denuncias');
+      await tester.pump(const Duration(milliseconds: 300));
+      final antesDaEducativa = _pilha(tester);
+
+      navigator.toDenunciaEducativa();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(_pilha(tester), antesDaEducativa + 1);
+
+      navigator.toDenunciaNova();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(tester.takeException(), isNull);
+      expect(_pilha(tester), antesDaEducativa + 2);
     },
   );
 
