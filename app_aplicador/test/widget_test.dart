@@ -21,7 +21,31 @@ int _pilha(WidgetTester tester) => GoRouter.of(
   _routerContext(tester),
 ).routerDelegate.currentConfiguration.matches.length;
 
+const _aplicadorDeTeste = Usuario(
+  id: 'aplicador-teste',
+  nome: 'Aplicador de Teste',
+  tenantId: 'gaspar-sc',
+);
+
+/// Entra como aplicador sem passar pela API (GEOPRAG-187): as rotas pós-login
+/// só abrem com sessão. O app carrega o tenant dessa sessão sozinho.
+void _autenticar() => sessaoDoApp.iniciarSessao(_aplicadorDeTeste);
+
 void main() {
+  setUpAll(() {
+    // Cliente sem rede: estes testes de navegação nunca chamam a API.
+    ApiClientProvider.configurar(
+      ApiClient(
+        config: ApiConfig(baseUrl: 'http://localhost:8080'),
+        sessao: SessaoDeTokensEmMemoria(),
+      ),
+    );
+  });
+
+  // `sessaoDoApp` é singleton de main.dart, compartilhado entre os testes:
+  // cada teste começa sem sessão.
+  setUp(() => sessaoDoApp.sessaoPerdida());
+
   testWidgets('app sobe sem erro e mostra a landing screen', (tester) async {
     // '/' está em `_publicPaths` — a landing screen renderiza sem depender
     // do TenantCubit, mas o binding do teste roda tudo dentro de uma zona
@@ -46,6 +70,7 @@ void main() {
     // main.dart são singletons top-level (compartilhados entre testes),
     // então as 4 rotas são visitadas numa única árvore/teste em vez de um
     // `pumpWidget` por rota.
+    _autenticar();
     await tester.pumpWidget(const AppAplicador());
     await tester.pump(const Duration(milliseconds: 600));
 
@@ -73,6 +98,7 @@ void main() {
       // telas fazem BlocBuilder<XCubit, ...> por dentro. Reproduzia "Could
       // not find the correct Provider<XCubit>" ao clicar em "continuar" na
       // tela informativa.
+      _autenticar();
       await tester.pumpWidget(const AppAplicador());
       await tester.pump(const Duration(milliseconds: 600));
 
@@ -97,7 +123,8 @@ void main() {
       // GoRouter/AppBar mostravam um botão de voltar indevido. Reproduz o
       // mesmo encadeamento da tela de login (push '/login' a partir da
       // landing, depois vai para '/ponto') e confirma que a pilha fica com
-      // uma única rota.
+      // uma única rota. Com o guard de sessão (GEOPRAG-187), o login precisa
+      // concluir antes de '/ponto': a sessão inicia e então o app navega.
       await tester.pumpWidget(const AppAplicador());
       await tester.pump(const Duration(milliseconds: 600));
 
@@ -105,6 +132,8 @@ void main() {
       router.push('/login');
       await tester.pump(const Duration(milliseconds: 300));
 
+      _autenticar();
+      await tester.pump(const Duration(milliseconds: 600));
       router.go('/ponto');
       await tester.pump(const Duration(milliseconds: 300));
 
@@ -112,6 +141,47 @@ void main() {
       expect(Navigator.canPop(_routerContext(tester)), isFalse);
     },
   );
+
+  group('guard de sessão (GEOPRAG-187)', () {
+    String rotaAtual(WidgetTester tester) => GoRouter.of(
+      _routerContext(tester),
+    ).routerDelegate.currentConfiguration.uri.path;
+
+    testWidgets('rota protegida sem sessão volta ao login', (tester) async {
+      await tester.pumpWidget(const AppAplicador());
+      await tester.pump(const Duration(milliseconds: 600));
+
+      GoRouter.of(_routerContext(tester)).go('/ponto');
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(rotaAtual(tester), '/login');
+    });
+
+    testWidgets('sessão reaberta pula a landing e o login', (tester) async {
+      _autenticar();
+      await tester.pumpWidget(const AppAplicador());
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(rotaAtual(tester), '/ponto');
+      GoRouter.of(_routerContext(tester)).go('/login');
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(rotaAtual(tester), '/ponto');
+    });
+
+    testWidgets('perder a sessão (refresh recusado) volta ao login', (
+      tester,
+    ) async {
+      _autenticar();
+      await tester.pumpWidget(const AppAplicador());
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(rotaAtual(tester), '/ponto');
+
+      sessaoDoApp.sessaoPerdida();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(rotaAtual(tester), '/login');
+    });
+  });
 
   testWidgets(
     'toAplicacaoGeo/toAplicacaoRegistrar empilham — voltar do Android '
@@ -125,6 +195,7 @@ void main() {
       // cadeia real (`meus_pontos` → `detalhe_do_ponto` → `tela_informativa`
       // → `geolocalizacao`) e confere que cada etapa soma +1 à pilha, nunca
       // fica no mesmo tamanho.
+      _autenticar();
       await tester.pumpWidget(const AppAplicador());
       await tester.pump(const Duration(milliseconds: 600));
 
@@ -161,6 +232,7 @@ void main() {
     (tester) async {
       // GEOPRAG-152: mesma correção para o fluxo de nova denúncia — reproduz
       // a cadeia real (`dashboard_de_focos` → `tela_educativa`).
+      _autenticar();
       await tester.pumpWidget(const AppAplicador());
       await tester.pump(const Duration(milliseconds: 600));
 
@@ -192,6 +264,7 @@ void main() {
       // e a tela faz BlocBuilder<RecebimentoConfirmacaoCubit, ...> por
       // dentro. Reproduzia "Could not find the correct Provider<...>" ao
       // navegar até lá.
+      _autenticar();
       await tester.pumpWidget(const AppAplicador());
       await tester.pump(const Duration(milliseconds: 600));
 
