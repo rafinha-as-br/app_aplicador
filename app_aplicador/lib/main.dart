@@ -8,16 +8,46 @@ import 'package:go_router/go_router.dart';
 import 'navigation/aplicador_go_router_navigator.dart';
 import 'navigation/go_router_refresh_stream.dart';
 
-void main() {
+/// A URL da API entra na compilação: `--dart-define=API_BASE_URL=http://10.0.2.2:8080`
+/// no emulador Android (GEOPRAG-187).
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Refresh token recusado ou ausente: os tokens já foram apagados, só falta
+  // voltar ao login.
+  _bootstrap.configurarApi(aoPerderSessao: _sessaoCubit.sessaoPerdida);
+  // Reabre a sessão guardada no aparelho, sem rede, antes de o app aparecer.
+  await _sessaoCubit.restaurar();
   runApp(const AppAplicador());
 }
 
 const AplicadorBootstrap _bootstrap = AplicadorBootstrap();
 
-// TODO(GEOPRAG-24): tenant_id real vem do login (Fase 4/contrato de
-// endpoints); mockado aqui até o contrato ser fechado com o backend.
-final TenantCubit _tenantCubit = _bootstrap.buildTenantCubit()
-  ..load('gaspar-sc');
+final TenantCubit _tenantCubit = _bootstrap.buildTenantCubit();
+
+// Sessão do aplicador logado (GEOPRAG-187) — provida na raiz pelo mesmo
+// motivo do _tenantCubit: o `redirect` do GoRouter precisa dela antes de
+// qualquer tela existir. O tenant vem dela, nunca de valor fixo.
+final AplicadorSessaoCubit _sessaoCubit = _bootstrap
+    .buildAplicadorSessaoCubit();
+
+/// Cubit de sessão do app, para os testes autenticarem sem passar pela API.
+@visibleForTesting
+AplicadorSessaoCubit get sessaoDoApp => _sessaoCubit;
+
+/// Carrega a configuração do tenant do usuário logado.
+void _carregarTenantDaSessao(AplicadorSessaoState sessao) {
+  if (sessao is AplicadorSessaoAutenticada) {
+    _tenantCubit.load(sessao.usuario.tenantId);
+  }
+}
+
+/// `id` do aplicador logado — só chamado a partir de rotas protegidas, onde o
+/// `redirect` abaixo já garante [AplicadorSessaoAutenticada].
+String _aplicadorLogadoId() {
+  final sessao = _sessaoCubit.state;
+  if (sessao is AplicadorSessaoAutenticada) return sessao.usuario.id;
+  throw StateError('Rota autenticada acessada sem sessão ativa.');
+}
 
 const _publicPaths = {
   '/',
@@ -30,12 +60,26 @@ const _publicPaths = {
 
 final GoRouter _router = GoRouter(
   initialLocation: '/',
-  refreshListenable: GoRouterRefreshStream(_tenantCubit.stream),
-  // TODO(GEOPRAG-24): guard de auth real vem da Fase 3/4 (AuthBloc); por ora
-  // considera sempre autenticado. Guard de tenant abaixo já é real (Fase 2).
+  refreshListenable: Listenable.merge([
+    GoRouterRefreshStream(_tenantCubit.stream),
+    GoRouterRefreshStream(_sessaoCubit.stream),
+  ]),
   redirect: (context, state) {
-    if (_publicPaths.contains(state.matchedLocation)) return null;
-    if (_tenantCubit.state is! TenantReady) return '/tenant/carregando';
+    final local = state.matchedLocation;
+    final autenticado = _sessaoCubit.state is AplicadorSessaoAutenticada;
+    final tenantPronto = _tenantCubit.state is TenantReady;
+    // Sessão reaberta (ou recém-iniciada): quem já está logado não volta à
+    // landing nem ao login, e sai da tela de carregamento quando o tenant fica
+    // pronto.
+    if (autenticado &&
+        (local == '/' ||
+            local == '/login' ||
+            (local == '/tenant/carregando' && tenantPronto))) {
+      return '/ponto';
+    }
+    if (_publicPaths.contains(local)) return null;
+    if (!autenticado) return '/login';
+    if (!tenantPronto) return '/tenant/carregando';
     return null;
   },
   routes: [
@@ -74,10 +118,8 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/ponto',
-      // TODO(GEOPRAG-24): aplicadorId mockado — o roteamento real ainda não
-      // repassa qual aplicador está autenticado/em campo (ver bootstrap.dart).
       builder: (context, state) => BlocProvider(
-        create: (_) => _bootstrap.buildMeusPontosCubit('1'),
+        create: (_) => _bootstrap.buildMeusPontosCubit(_aplicadorLogadoId()),
         child: const MeusPontosScreen(),
       ),
     ),
@@ -158,25 +200,45 @@ final GoRouter _router = GoRouter(
   ],
 );
 
-class AppAplicador extends StatelessWidget {
+class AppAplicador extends StatefulWidget {
   const AppAplicador({super.key});
 
   @override
+  State<AppAplicador> createState() => _AppAplicadorState();
+}
+
+class _AppAplicadorState extends State<AppAplicador> {
+  @override
+  void initState() {
+    super.initState();
+    // Sessão reaberta ao iniciar o app: o tenant dela precisa carregar mesmo
+    // sem nenhuma mudança de estado a ouvir.
+    _carregarTenantDaSessao(_sessaoCubit.state);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // TenantCubit é provido na raiz (exceção deliberada à regra de
-    // "BlocProvider escopado por rota" da Fase 3): ele guia o `redirect` do
-    // GoRouter antes de qualquer tela existir, então precisa estar acima do
-    // router. Os demais Blocs (auth, etc.) ficam escopados por rota, dentro
-    // de cada `GoRoute.builder` acima.
-    return BlocProvider.value(
-      value: _tenantCubit,
-      child: MaterialApp.router(
-        title: 'GeoPrag - Aplicador',
-        theme: GeopragTheme.light(),
-        routerConfig: _router,
-        builder: (context, child) => AplicadorNavigatorScope(
-          navigator: AplicadorGoRouterNavigator(_router),
-          child: child!,
+    // TenantCubit e AplicadorSessaoCubit são providos na raiz (exceção
+    // deliberada à regra de "BlocProvider escopado por rota" da Fase 3): ambos
+    // guiam o `redirect` do GoRouter antes de qualquer tela existir, então
+    // precisam estar acima do router. Os demais Blocs (auth, etc.) ficam
+    // escopados por rota, dentro de cada `GoRoute.builder` acima.
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _tenantCubit),
+        BlocProvider.value(value: _sessaoCubit),
+      ],
+      // Login feito agora: carrega o tenant que o servidor devolveu.
+      child: BlocListener<AplicadorSessaoCubit, AplicadorSessaoState>(
+        listener: (_, sessao) => _carregarTenantDaSessao(sessao),
+        child: MaterialApp.router(
+          title: 'GeoPrag - Aplicador',
+          theme: GeopragTheme.light(),
+          routerConfig: _router,
+          builder: (context, child) => AplicadorNavigatorScope(
+            navigator: AplicadorGoRouterNavigator(_router),
+            child: child!,
+          ),
         ),
       ),
     );
