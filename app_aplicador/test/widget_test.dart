@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geoprag_modules/aplicador_app/nucleo_offline.dart';
+import 'package:geoprag_modules/aplicador_app/sincronizacao/core/monitor_de_conexao.dart';
 import 'package:geoprag_modules/geoprag_modules.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sqflite_common/utils/utils.dart' as sqflite_utils;
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:app_aplicador/main.dart';
 
@@ -31,16 +35,51 @@ const _aplicadorDeTeste = Usuario(
 /// só abrem com sessão. O app carrega o tenant dessa sessão sozinho.
 void _autenticar() => sessaoDoApp.iniciarSessao(_aplicadorDeTeste);
 
+/// Armazenamento seguro em memória (o real usa plugin nativo).
+class _ArmazenamentoEmMemoria implements ArmazenamentoSeguro {
+  final Map<String, String> _dados = {};
+
+  @override
+  Future<String?> ler(String chave) async => _dados[chave];
+
+  @override
+  Future<void> gravar(String chave, String valor) async =>
+      _dados[chave] = valor;
+
+  @override
+  Future<void> apagar(String chave) async => _dados.remove(chave);
+}
+
+/// Sem aviso de rede: nenhum gatilho de conexão dispara nos testes.
+class _SemMonitor implements MonitorDeConexao {
+  @override
+  Stream<void> get aoConectar => const Stream<void>.empty();
+}
+
 void main() {
-  setUpAll(() {
+  setUpAll(() async {
     // Cliente sem rede: estes testes de navegação nunca chamam a API.
-    ApiClientProvider.configurar(
-      ApiClient(
-        config: ApiConfig(baseUrl: 'http://localhost:8080'),
-        sessao: SessaoDeTokensEmMemoria(),
-      ),
+    final api = ApiClient(
+      config: ApiConfig(baseUrl: 'http://localhost:8080'),
+      sessao: SessaoDeTokensEmMemoria(),
+    );
+    ApiClientProvider.configurar(api);
+    // O núcleo offline (banco local) abre em `main`; aqui, em memória.
+    sqfliteFfiInit();
+    // O aviso de banco travado é um Timer de 10 s: dentro do relógio falso do
+    // testWidgets ele ficaria pendente ao fim de cada teste.
+    // ignore: deprecated_member_use
+    sqflite_utils.lockWarningDuration = null;
+    await NucleoOffline.iniciar(
+      api: api,
+      armazenamento: _ArmazenamentoEmMemoria(),
+      monitor: _SemMonitor(),
+      fabrica: databaseFactoryFfi,
+      caminho: inMemoryDatabasePath,
     );
   });
+
+  tearDownAll(NucleoOffline.redefinir);
 
   // `sessaoDoApp` é singleton de main.dart, compartilhado entre os testes:
   // cada teste começa sem sessão.

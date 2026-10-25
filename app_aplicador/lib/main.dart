@@ -15,6 +15,9 @@ Future<void> main() async {
   // Refresh token recusado ou ausente: os tokens já foram apagados, só falta
   // voltar ao login.
   _bootstrap.configurarApi(aoPerderSessao: _sessaoCubit.sessaoPerdida);
+  // Abre o banco local e liga a sincronização (GEOPRAG-203): "Meus Pontos" e o
+  // registro de aplicação leem e gravam nele, com ou sem rede.
+  await _bootstrap.iniciarNucleoOffline();
   // Reabre a sessão guardada no aparelho, sem rede, antes de o app aparecer.
   await _sessaoCubit.restaurar();
   runApp(const AppAplicador());
@@ -120,7 +123,9 @@ final GoRouter _router = GoRouter(
       path: '/ponto',
       builder: (context, state) => BlocProvider(
         create: (_) => _bootstrap.buildMeusPontosCubit(_aplicadorLogadoId()),
-        child: const MeusPontosScreen(),
+        child: MeusPontosScreen(
+          resumoDaSincronizacao: _bootstrap.buildResumoDaSincronizacao(),
+        ),
       ),
     ),
     GoRoute(
@@ -153,7 +158,8 @@ final GoRouter _router = GoRouter(
       builder: (context, state) {
         final pontoId = state.uri.queryParameters['id']!;
         return BlocProvider(
-          create: (_) => _bootstrap.buildTelaDeAplicacaoCubit(pontoId),
+          create: (_) =>
+              _bootstrap.buildTelaDeAplicacaoCubit(pontoId, _aplicadorLogadoId()),
           child: const TelaDeAplicacaoScreen(),
         );
       },
