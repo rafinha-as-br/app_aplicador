@@ -79,7 +79,11 @@ void main() {
     );
   });
 
-  tearDownAll(NucleoOffline.redefinir);
+  // Sem `tearDownAll(NucleoOffline.redefinir)`: o núcleo vive só neste isolate
+  // (um por arquivo de teste) e o banco é em memória. As sincronizações que os
+  // gatilhos disparam durante os `testWidgets` (ciclo de vida `resumed`) nascem
+  // na zona de relógio falso, que morre com o teste: o que ficou em voo nunca
+  // completa, e `redefinir` esperaria por isso (fechar o banco) para sempre.
 
   // `sessaoDoApp` é singleton de main.dart, compartilhado entre os testes:
   // cada teste começa sem sessão.
