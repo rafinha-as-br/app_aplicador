@@ -268,8 +268,8 @@ packages:
     dependency: "direct main"
     description:
       path: geoprag_modules_project
-      ref: "epic/GEOPRAG-172-integracao-flutter"
-      resolved-ref: df2d279936712eb54f9c5627efb7ec27f6a5d8ba
+      ref: develop
+      resolved-ref: "4fd5eac1b5854f7654b7bf650ff8f3a19b5e91c3"
       url: "https://github.com/rafinha-as-br/geoprag_modules.git"
     source: git
     version: "0.1.0"
