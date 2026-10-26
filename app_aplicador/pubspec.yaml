@@ -45,6 +45,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Banco SQLite em memória nos testes de navegação (o núcleo offline abre em
+  # main). Limitado a 2.3.x porque a 2.4 exige Dart 3.10 (CI em 3.9).
+  sqflite_common_ffi: '>=2.3.7+1 <2.4.0'
+  sqflite_common: '>=2.5.5 <2.5.6+1'
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
